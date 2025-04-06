@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +46,7 @@ const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
       setIsAddDialogOpen(false);
       toast({
         title: "章节已创建",
-        description: `"${newChapterTitle}" 已添加到您的作品中",
+        description: `"${newChapterTitle}" 已添加到您的作品中`,
       });
     }
   };
@@ -66,7 +67,7 @@ const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
       onDeleteChapter(id);
       toast({
         title: "章节已删除",
-        description: `"${title}" 已从您的作品中移除",
+        description: `"${title}" 已从您的作品中移除`,
         variant: "destructive",
       });
     }
