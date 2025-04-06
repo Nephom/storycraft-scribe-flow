@@ -1,5 +1,5 @@
 
-interface Chapter {
+export interface Chapter {
   id: string;
   title: string;
   content: string;
@@ -7,7 +7,7 @@ interface Chapter {
   updatedAt: number;
 }
 
-interface NovelProject {
+export interface NovelProject {
   title: string;
   chapters: Chapter[];
   lastSaved: number;

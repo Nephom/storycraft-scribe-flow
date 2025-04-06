@@ -5,6 +5,7 @@ import ChapterSidebar from '@/components/ChapterSidebar';
 import Editor from '@/components/Editor';
 import Navbar from '@/components/Navbar';
 import { useToast } from "@/hooks/use-toast";
+import { NovelProject, Chapter } from '@/types';
 import { 
   loadNovelProject, 
   saveNovelProject, 
