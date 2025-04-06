@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Book, FileText, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Chapter } from '@/types';
 
 interface ChapterSidebarProps {
   chapters: Chapter[];
@@ -45,7 +45,7 @@ const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
       setIsAddDialogOpen(false);
       toast({
         title: "章节已创建",
-        description: `"${newChapterTitle}" 已添加到您的作品中`,
+        description: `"${newChapterTitle}" 已添加到您的作品中",
       });
     }
   };
@@ -66,7 +66,7 @@ const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
       onDeleteChapter(id);
       toast({
         title: "章节已删除",
-        description: `"${title}" 已从您的作品中移除`,
+        description: `"${title}" 已从您的作品中移除",
         variant: "destructive",
       });
     }
