@@ -6,6 +6,7 @@ import Editor from '@/components/Editor';
 import Navbar from '@/components/Navbar';
 import { useToast } from "@/hooks/use-toast";
 import { NovelProject, Chapter } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   loadNovelProject, 
   saveNovelProject, 
@@ -22,6 +23,7 @@ const Index = () => {
   const [project, setProject] = useState<NovelProject | null>(null);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     // 页面加载时尝试从 localStorage 加载项目
