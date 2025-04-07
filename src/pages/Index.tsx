@@ -23,7 +23,7 @@ const Index = () => {
   const [project, setProject] = useState<NovelProject | null>(null);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     // 页面加载时尝试从 localStorage 加载项目
@@ -42,16 +42,16 @@ const Index = () => {
     }
   }, []);
 
-  // 添加一个自动保存功能
+  // 添加一个自动保存功能，只对已登录用户生效
   useEffect(() => {
-    if (project) {
+    if (project && isAuthenticated) {
       const intervalId = setInterval(() => {
         saveNovelProject(project);
       }, 60000); // 每分钟自动保存一次
       
       return () => clearInterval(intervalId);
     }
-  }, [project]);
+  }, [project, isAuthenticated]);
 
   const getActiveChapter = (): Chapter | null => {
     if (!project || !activeChapterId) return null;
@@ -59,7 +59,7 @@ const Index = () => {
   };
 
   const handleAddChapter = (title: string) => {
-    if (!project) return;
+    if (!project || !isAuthenticated) return;
     
     const updatedProject = addChapter(project, title);
     setProject(updatedProject);
@@ -71,7 +71,7 @@ const Index = () => {
   };
 
   const handleUpdateChapter = (chapterId: string, content: string) => {
-    if (!project) return;
+    if (!project || !isAuthenticated) return;
     
     const updatedProject = updateChapterService(project, chapterId, content);
     setProject(updatedProject);
@@ -79,7 +79,7 @@ const Index = () => {
   };
 
   const handleDeleteChapter = (chapterId: string) => {
-    if (!project) return;
+    if (!project || !isAuthenticated) return;
     
     const updatedProject = deleteChapterService(project, chapterId);
     setProject(updatedProject);
@@ -96,7 +96,7 @@ const Index = () => {
   };
 
   const handleRenameChapter = (chapterId: string, newTitle: string) => {
-    if (!project) return;
+    if (!project || !isAuthenticated) return;
     
     const updatedProject = renameChapterService(project, chapterId, newTitle);
     setProject(updatedProject);
@@ -104,7 +104,7 @@ const Index = () => {
   };
 
   const handleSaveAll = () => {
-    if (project) {
+    if (project && isAuthenticated) {
       saveNovelProject(project);
     }
   };
@@ -136,6 +136,7 @@ const Index = () => {
           onAddChapter={handleAddChapter}
           onDeleteChapter={handleDeleteChapter}
           onRenameChapter={handleRenameChapter}
+          isReadOnly={!isAuthenticated}
         />
         
         <div className="flex-1 flex flex-col h-full overflow-hidden">

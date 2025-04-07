@@ -12,11 +12,11 @@ import { useAuth } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
-// Protected route component
+// Protected route component for editing
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isGuest } = useAuth();
   
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isGuest) {
     return <Navigate to="/login" />;
   }
   

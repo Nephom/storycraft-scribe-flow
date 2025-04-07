@@ -11,6 +11,8 @@ interface AuthContextType {
   login: (username: string, password: string) => boolean;
   logout: () => void;
   isAuthenticated: boolean;
+  isGuest: boolean;
+  continueAsGuest: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +23,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [isGuest, setIsGuest] = useState<boolean>(() => {
+    return localStorage.getItem('guestMode') === 'true';
+  });
 
   const isAuthenticated = !!user;
 
@@ -30,7 +35,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (username.length >= 3 && password.length >= 6) {
       const user = { username, id: Date.now().toString() };
       setUser(user);
+      setIsGuest(false);
       localStorage.setItem('user', JSON.stringify(user));
+      localStorage.removeItem('guestMode');
       return true;
     }
     return false;
@@ -38,11 +45,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
+    setIsGuest(false);
     localStorage.removeItem('user');
+    localStorage.removeItem('guestMode');
+  };
+
+  const continueAsGuest = () => {
+    setIsGuest(true);
+    localStorage.setItem('guestMode', 'true');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isGuest, continueAsGuest }}>
       {children}
     </AuthContext.Provider>
   );

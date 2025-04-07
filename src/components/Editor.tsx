@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import MarkdownPreview from './MarkdownPreview';
@@ -5,8 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, FileText, BookOpen } from "lucide-react";
+import { Save, FileText, BookOpen, Lock } from "lucide-react";
 import { Chapter } from '@/types';
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EditorProps {
   activeChapter: Chapter | null;
@@ -18,6 +20,7 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter }) => {
   const [fontSize, setFontSize] = useState("16");
   const [fontFamily, setFontFamily] = useState("sans");
   const { toast } = useToast();
+  const { isAuthenticated, isGuest } = useAuth();
 
   useEffect(() => {
     if (activeChapter) {
@@ -28,7 +31,7 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter }) => {
   }, [activeChapter]);
 
   const handleSave = () => {
-    if (activeChapter) {
+    if (activeChapter && isAuthenticated) {
       updateChapter(activeChapter.id, content);
       toast({
         title: "已保存",
@@ -38,7 +41,9 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter }) => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
+    if (isAuthenticated) {
+      setContent(e.target.value);
+    }
   };
 
   const fontStyles = {
@@ -90,35 +95,53 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter }) => {
           </Select>
         </div>
         
-        <Button onClick={handleSave} variant="outline" size="sm">
-          <Save className="mr-2 h-4 w-4" />
-          保存
-        </Button>
+        {isAuthenticated ? (
+          <Button onClick={handleSave} variant="outline" size="sm">
+            <Save className="mr-2 h-4 w-4" />
+            保存
+          </Button>
+        ) : (
+          <div className="text-amber-500 flex items-center">
+            <Lock className="mr-2 h-4 w-4" />
+            <span className="text-xs">访客模式 - 只读</span>
+          </div>
+        )}
       </div>
 
-      <Tabs defaultValue="write" className="flex-1 flex flex-col">
+      <Tabs defaultValue={isAuthenticated ? "write" : "preview"} className="flex-1 flex flex-col">
         <TabsList className="mx-4 mt-2">
-          <TabsTrigger value="write" className="flex items-center">
-            <FileText className="mr-2 h-4 w-4" />
-            编辑
-          </TabsTrigger>
-          <TabsTrigger value="preview" className="flex items-center">
-            <BookOpen className="mr-2 h-4 w-4" />
-            预览
-          </TabsTrigger>
+          {isAuthenticated ? (
+            <>
+              <TabsTrigger value="write" className="flex items-center">
+                <FileText className="mr-2 h-4 w-4" />
+                编辑
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="flex items-center">
+                <BookOpen className="mr-2 h-4 w-4" />
+                预览
+              </TabsTrigger>
+            </>
+          ) : (
+            <TabsTrigger value="preview" className="flex items-center">
+              <BookOpen className="mr-2 h-4 w-4" />
+              阅读
+            </TabsTrigger>
+          )}
         </TabsList>
         
-        <TabsContent value="write" className="flex-1 p-4 overflow-auto bg-editor">
-          <div className="bg-editor-paper mx-auto max-w-4xl px-8 py-10 min-h-full shadow-sm">
-            <Textarea
-              value={content}
-              onChange={handleChange}
-              className="w-full h-full min-h-[calc(100vh-250px)] resize-none border-0 focus-visible:ring-0 p-0"
-              placeholder="开始撰写您的小说..."
-              style={fontStyles}
-            />
-          </div>
-        </TabsContent>
+        {isAuthenticated && (
+          <TabsContent value="write" className="flex-1 p-4 overflow-auto bg-editor">
+            <div className="bg-editor-paper mx-auto max-w-4xl px-8 py-10 min-h-full shadow-sm">
+              <Textarea
+                value={content}
+                onChange={handleChange}
+                className="w-full h-full min-h-[calc(100vh-250px)] resize-none border-0 focus-visible:ring-0 p-0"
+                placeholder="开始撰写您的小说..."
+                style={fontStyles}
+              />
+            </div>
+          </TabsContent>
+        )}
         
         <TabsContent value="preview" className="flex-1 p-4 overflow-auto bg-editor">
           <div className="bg-editor-paper mx-auto max-w-4xl px-8 py-10 min-h-full shadow-sm">

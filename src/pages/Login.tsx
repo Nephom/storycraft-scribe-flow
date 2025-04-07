@@ -7,21 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
-import { Book } from "lucide-react";
+import { Book, Eye } from "lucide-react";
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, continueAsGuest, isGuest } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // If user is already logged in, redirect to home
+  // If user is already logged in or in guest mode, redirect to home
   React.useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated || isGuest) {
       navigate('/');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isGuest, navigate]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +39,15 @@ const Login = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleGuestAccess = () => {
+    continueAsGuest();
+    toast({
+      title: "访客模式",
+      description: "您现在可以浏览内容，但无法编辑。",
+    });
+    navigate('/');
   };
 
   return (
@@ -77,8 +86,17 @@ const Login = () => {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col space-y-2">
             <Button type="submit" className="w-full">登录</Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleGuestAccess}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              以访客模式浏览
+            </Button>
           </CardFooter>
         </form>
       </Card>
