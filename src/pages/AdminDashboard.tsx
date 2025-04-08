@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { user, users } = useAuth();
@@ -30,7 +31,15 @@ const AdminDashboard = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+      <div className="flex items-center mb-6">
+        <Link to="/">
+          <Button variant="outline" size="sm" className="mr-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Home
+          </Button>
+        </Link>
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      </div>
       
       <div className="grid gap-8">
         <div className="rounded-lg border p-6 shadow-sm">

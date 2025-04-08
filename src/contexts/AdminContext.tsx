@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 interface AdminSettings {
   allowRegistration: boolean;
+  dashboardUrl: string; // Added to store the admin dashboard URL
 }
 
 interface AdminContextType {
@@ -14,6 +15,7 @@ interface AdminContextType {
 
 const defaultSettings: AdminSettings = {
   allowRegistration: true,
+  dashboardUrl: '/admin', // Default admin dashboard URL
 };
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
