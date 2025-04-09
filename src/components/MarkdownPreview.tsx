@@ -10,7 +10,19 @@ interface MarkdownPreviewProps {
 const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, style }) => {
   return (
     <div className="markdown-preview" style={style}>
-      <ReactMarkdown>{content}</ReactMarkdown>
+      <ReactMarkdown
+        components={{
+          img: ({ node, ...props }) => (
+            <img
+              {...props}
+              className="max-w-full h-auto my-4 rounded-md"
+              alt={props.alt || 'Illustration'}
+            />
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
 };
