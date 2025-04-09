@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import MarkdownPreview from './MarkdownPreview';
@@ -80,6 +79,7 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter }) => {
       toast({
         title: "图片已插入",
         description: "图片已成功插入到文档中",
+        variant: "default"
       });
     };
     reader.readAsDataURL(file);
@@ -246,7 +246,7 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter }) => {
                 ref={textareaRef}
                 value={content}
                 onChange={handleChange}
-                className="w-full h-full min-h-[calc(100vh-250px)] resize-none border-0 focus-visible:ring-0 p-0"
+                className="w-full h-full min-h-[calc(100vh-250px)] resize-none border-0 focus-visible:ring-0 p-0 whitespace-pre-wrap"
                 placeholder="开始撰写您的小说..."
                 style={fontStyles}
               />
