@@ -1,8 +1,8 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 interface MarkdownPreviewProps {
   content: string;
@@ -13,7 +13,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, style }) => 
   return (
     <div className="markdown-preview" style={style}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
+        // Use proper TypeScript casting to avoid type errors
+        remarkPlugins={[remarkGfm as any, remarkBreaks as any]}
         components={{
           img: ({ node, ...props }) => (
             <img
