@@ -13,7 +13,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, style }) => 
   return (
     <div className="markdown-preview" style={style}>
       <ReactMarkdown
-        remarkPlugins={[remarkBreaks, remarkGfm]}
+        remarkPlugins={[[remarkGfm], [remarkBreaks]]}
         components={{
           img: ({ node, ...props }) => (
             <img
