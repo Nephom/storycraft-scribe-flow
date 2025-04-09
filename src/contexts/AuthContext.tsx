@@ -1,29 +1,24 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-
-type User = {
-  username: string;
-  id: string;
-  isAdmin?: boolean;
-};
+import { User, authenticateUser, createUser, getAllUsers, getAdminSettings, updateAdminSettings } from '@/services/storageService';
 
 interface AuthContextType {
-  user: User | null;
+  user: Omit<User, 'passwordHash'> | null;
   login: (username: string, password: string) => boolean;
   register: (username: string, password: string, isAdmin?: boolean) => boolean;
   logout: () => void;
   isAuthenticated: boolean;
   isGuest: boolean;
   continueAsGuest: () => void;
-  users: User[];
+  users: Omit<User, 'passwordHash'>[];
   isRegistrationAllowed: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // In a real app, we would check localStorage or a session cookie on load
-  const [user, setUser] = useState<User | null>(() => {
+  // 在加载时检查本地存储是否有已登录用户
+  const [user, setUser] = useState<Omit<User, 'passwordHash'> | null>(() => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
@@ -32,88 +27,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return localStorage.getItem('guestMode') === 'true';
   });
 
-  const [users, setUsers] = useState<User[]>(() => {
-    const savedUsers = localStorage.getItem('users');
-    return savedUsers ? JSON.parse(savedUsers) : [];
+  const [users, setUsers] = useState<Omit<User, 'passwordHash'>[]>(() => {
+    return getAllUsers();
   });
 
   const [isRegistrationAllowed, setIsRegistrationAllowed] = useState<boolean>(() => {
-    const settings = localStorage.getItem('adminSettings');
-    if (settings) {
-      const parsedSettings = JSON.parse(settings);
-      return parsedSettings.allowRegistration;
-    }
-    return true; // Default to allowing registration
+    const settings = getAdminSettings();
+    return settings.allowRegistration;
   });
 
+  // 监听管理员设置变化
   useEffect(() => {
-    // Listen for changes in admin settings
-    const handleStorageChange = () => {
-      const settings = localStorage.getItem('adminSettings');
-      if (settings) {
-        const parsedSettings = JSON.parse(settings);
-        setIsRegistrationAllowed(parsedSettings.allowRegistration);
-      }
+    // 定期检查管理员设置
+    const checkAdminSettings = () => {
+      const settings = getAdminSettings();
+      setIsRegistrationAllowed(settings.allowRegistration);
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    const interval = setInterval(checkAdminSettings, 5000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Check local storage for admin settings on mount
+  // 加载时检查管理员设置
   useEffect(() => {
-    const settings = localStorage.getItem('adminSettings');
-    if (settings) {
-      const parsedSettings = JSON.parse(settings);
-      setIsRegistrationAllowed(parsedSettings.allowRegistration);
-    }
+    const settings = getAdminSettings();
+    setIsRegistrationAllowed(settings.allowRegistration);
+  }, []);
+
+  // 定期刷新用户列表
+  useEffect(() => {
+    const refreshUsers = () => {
+      setUsers(getAllUsers());
+    };
+    
+    const interval = setInterval(refreshUsers, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const isAuthenticated = !!user;
 
-  // Modified register function that respects admin settings
+  // 修改后的注册函数
   const register = (username: string, password: string, isAdmin = false): boolean => {
-    // Check if registration is allowed (unless it's an admin account when no users exist)
+    // 检查是否允许注册（除非是在没有用户时创建管理员账户）
     if (!isAdmin && !isRegistrationAllowed) {
       return false;
     }
 
-    // Very simple validation - in a real app this would verify against a database
-    if (username.length >= 3 && password.length >= 6) {
-      // Check if username already exists
-      if (users.some(u => u.username === username)) {
-        return false;
-      }
+    // 基本验证
+    if (username.length < 3 || password.length < 6) {
+      return false;
+    }
 
-      const newUser = { username, id: Date.now().toString(), isAdmin };
-      const updatedUsers = [...users, newUser];
-      
-      setUsers(updatedUsers);
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-      
-      // Auto-login the new user
+    // 使用数据库服务创建用户
+    const newUser = createUser(username, password, isAdmin);
+    
+    if (newUser) {
+      // 自动登录新用户
       setUser(newUser);
       setIsGuest(false);
       localStorage.setItem('user', JSON.stringify(newUser));
       localStorage.removeItem('guestMode');
       
+      // 刷新用户列表
+      setUsers(getAllUsers());
+      
       return true;
     }
+    
     return false;
   };
 
-  // Mock login function - in a real app this would call an API
+  // 修改后的登录函数
   const login = (username: string, password: string): boolean => {
-    // Very simple validation - in a real app this would verify against a database
-    const foundUser = users.find(u => u.username === username);
+    // 使用数据库服务验证用户
+    const authenticatedUser = authenticateUser(username, password);
     
-    if (foundUser) {
-      setUser(foundUser);
+    if (authenticatedUser) {
+      setUser(authenticatedUser);
       setIsGuest(false);
-      localStorage.setItem('user', JSON.stringify(foundUser));
+      localStorage.setItem('user', JSON.stringify(authenticatedUser));
       localStorage.removeItem('guestMode');
       return true;
     }
+    
     return false;
   };
 

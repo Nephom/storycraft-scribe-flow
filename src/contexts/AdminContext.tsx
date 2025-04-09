@@ -1,9 +1,10 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { getAdminSettings, updateAdminSettings } from '@/services/storageService';
 
 interface AdminSettings {
   allowRegistration: boolean;
-  dashboardUrl: string; // Added to store the admin dashboard URL
+  dashboardUrl: string;
 }
 
 interface AdminContextType {
@@ -13,29 +14,32 @@ interface AdminContextType {
   completeAdminSetup: () => void;
 }
 
-const defaultSettings: AdminSettings = {
-  allowRegistration: true,
-  dashboardUrl: '/admin', // Default admin dashboard URL
-};
-
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<AdminSettings>(() => {
-    const savedSettings = localStorage.getItem('adminSettings');
-    return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
+    return getAdminSettings();
   });
 
   const [isAdminSetupComplete, setIsAdminSetupComplete] = useState<boolean>(() => {
     return localStorage.getItem('adminSetupComplete') === 'true';
   });
 
+  // 监听设置变化
   useEffect(() => {
-    localStorage.setItem('adminSettings', JSON.stringify(settings));
-  }, [settings]);
+    const checkSettings = () => {
+      const currentSettings = getAdminSettings();
+      setSettings(currentSettings);
+    };
+    
+    const interval = setInterval(checkSettings, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const updateSettings = (newSettings: Partial<AdminSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
+    const updatedSettings = { ...settings, ...newSettings };
+    updateAdminSettings(updatedSettings);
+    setSettings(updatedSettings);
   };
 
   const completeAdminSetup = () => {
