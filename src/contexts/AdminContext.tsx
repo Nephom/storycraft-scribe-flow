@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getAdminSettings, updateAdminSettings } from '@/services/storageService';
+import { getAdminSettings, updateAdminSettings, getAllUsers } from '@/services/storageService';
 
 interface AdminSettings {
   allowRegistration: boolean;
@@ -21,20 +21,31 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return getAdminSettings();
   });
 
+  // Check if admin setup is complete by verifying if any admin user exists
   const [isAdminSetupComplete, setIsAdminSetupComplete] = useState<boolean>(() => {
-    return localStorage.getItem('adminSetupComplete') === 'true';
+    // Check both the localStorage flag and if any admin user exists
+    const localStorageFlag = localStorage.getItem('adminSetupComplete') === 'true';
+    const adminUserExists = getAllUsers().some(user => user.isAdmin);
+    return localStorageFlag || adminUserExists;
   });
 
-  // 监听设置变化
+  // Monitor settings changes
   useEffect(() => {
     const checkSettings = () => {
       const currentSettings = getAdminSettings();
       setSettings(currentSettings);
+      
+      // Regularly check if any admin exists
+      const adminUserExists = getAllUsers().some(user => user.isAdmin);
+      if (adminUserExists && !isAdminSetupComplete) {
+        setIsAdminSetupComplete(true);
+        localStorage.setItem('adminSetupComplete', 'true');
+      }
     };
     
     const interval = setInterval(checkSettings, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAdminSetupComplete]);
 
   const updateSettings = (newSettings: Partial<AdminSettings>) => {
     const updatedSettings = { ...settings, ...newSettings };

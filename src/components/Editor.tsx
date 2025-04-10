@@ -9,6 +9,7 @@ import EditorToolbar from './editor/EditorToolbar';
 import EditorTextarea from './editor/EditorTextarea';
 import EditorPreview from './editor/EditorPreview';
 import NoChapterSelected from './editor/NoChapterSelected';
+import CharacterCounter from './editor/CharacterCounter';
 import { insertImageMarkdown } from './editor/ImageInsertUtils';
 
 interface EditorProps {
@@ -179,6 +180,9 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter }) => {
           <EditorPreview content={content} style={fontStyles} />
         </TabsContent>
       </Tabs>
+      
+      {/* Character counter */}
+      <CharacterCounter content={content} />
     </div>
   );
 };
