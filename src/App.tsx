@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -39,10 +38,9 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 // Admin setup route that checks if admin setup is needed
 const AdminSetupRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAdminSetupComplete } = useAdmin();
-  const { users } = useAuth();
   
-  // If admin setup is completed or an admin user exists, redirect to home
-  if (isAdminSetupComplete || users.some(user => user.isAdmin)) {
+  // 如果管理員設置已完成，重定向到首頁
+  if (isAdminSetupComplete) {
     return <Navigate to="/" />;
   }
   
@@ -53,8 +51,8 @@ const AppRoutes = () => {
   const { users } = useAuth();
   const { isAdminSetupComplete } = useAdmin();
   
-  // Check if we need to force admin setup (no admin exists and setup not marked as complete)
-  const needsAdminSetup = !isAdminSetupComplete && !users.some(user => user.isAdmin);
+  // 檢查是否需要強制進行管理員設置（沒有管理員用戶存在）
+  const needsAdminSetup = !isAdminSetupComplete;
   
   if (needsAdminSetup) {
     return (

@@ -21,25 +21,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return getAdminSettings();
   });
 
-  // Check if admin setup is complete by verifying if any admin user exists
+  // 檢查是否已經存在管理員帳號
   const [isAdminSetupComplete, setIsAdminSetupComplete] = useState<boolean>(() => {
-    // Check both the localStorage flag and if any admin user exists
-    const localStorageFlag = localStorage.getItem('adminSetupComplete') === 'true';
+    // 只檢查是否存在管理員使用者，不再依賴localStorage
     const adminUserExists = getAllUsers().some(user => user.isAdmin);
-    return localStorageFlag || adminUserExists;
+    return adminUserExists;
   });
 
-  // Monitor settings changes
+  // 監控設置變化
   useEffect(() => {
     const checkSettings = () => {
       const currentSettings = getAdminSettings();
       setSettings(currentSettings);
       
-      // Regularly check if any admin exists
+      // 定期檢查是否存在管理員帳號
       const adminUserExists = getAllUsers().some(user => user.isAdmin);
       if (adminUserExists && !isAdminSetupComplete) {
         setIsAdminSetupComplete(true);
-        localStorage.setItem('adminSetupComplete', 'true');
       }
     };
     
@@ -55,7 +53,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const completeAdminSetup = () => {
     setIsAdminSetupComplete(true);
-    localStorage.setItem('adminSetupComplete', 'true');
   };
 
   return (

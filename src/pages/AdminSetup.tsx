@@ -15,7 +15,7 @@ const AdminSetup = () => {
   const { isAdminSetupComplete, completeAdminSetup } = useAdmin();
   const { toast } = useToast();
 
-  // Redirect if admin setup is already complete
+  // 如果管理員設置已完成或已存在管理員用戶，則重定向
   if (isAdminSetupComplete || users.some(user => user.isAdmin)) {
     return <Navigate to="/" />;
   }
