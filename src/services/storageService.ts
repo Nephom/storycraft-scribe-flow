@@ -21,17 +21,19 @@ export {
 
 // User services
 export {
-  User,
   getAllUsers,
   createUser,
   authenticateUser,
   deleteUser,
   initUserDatabase
 } from './userService';
+// Re-export the User type using 'export type'
+export type { User } from './userService';
 
 // Admin services
 export {
-  AdminSettings,
   getAdminSettings,
   updateAdminSettings
 } from './adminService';
+// Re-export the AdminSettings type using 'export type'
+export type { AdminSettings } from './adminService';
