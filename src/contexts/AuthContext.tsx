@@ -4,7 +4,8 @@ import {
   authenticateWithRadius, 
   isRadiusConfigured, 
   isRadiusAdmin,
-  getAllRadiusUsers
+  getAllRadiusUsers,
+  registerRadiusUser
 } from '@/services/radiusService';
 
 interface User {
@@ -20,6 +21,7 @@ interface AuthContextType {
   isGuest: boolean;
   continueAsGuest: () => void;
   users: User[];
+  register: (username: string, password: string, isAdmin?: boolean) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,6 +75,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  const register = (username: string, password: string, isAdmin: boolean = false): boolean => {
+    // Register user using RADIUS
+    const success = registerRadiusUser(username, password, isAdmin);
+    
+    if (success) {
+      // Automatically log in the user after registration
+      const userObj = { username, isAdmin };
+      setUser(userObj);
+      setIsGuest(false);
+      localStorage.setItem('user', JSON.stringify(userObj));
+      localStorage.removeItem('guestMode');
+    }
+    
+    return success;
+  };
+
   const logout = () => {
     setUser(null);
     setIsGuest(false);
@@ -93,7 +111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthenticated, 
       isGuest, 
       continueAsGuest,
-      users
+      users,
+      register
     }}>
       {children}
     </AuthContext.Provider>

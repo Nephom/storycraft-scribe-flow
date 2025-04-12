@@ -77,15 +77,13 @@ const AdminDashboard = () => {
               <thead>
                 <tr className="border-b">
                   <th className="py-2 px-3 text-left">Username</th>
-                  <th className="py-2 px-3 text-left">ID</th>
                   <th className="py-2 px-3 text-left">Role</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map(user => (
-                  <tr key={user.id} className="border-b">
+                {users.map((user, index) => (
+                  <tr key={user.username || index} className="border-b">
                     <td className="py-2 px-3">{user.username}</td>
-                    <td className="py-2 px-3">{user.id}</td>
                     <td className="py-2 px-3">{user.isAdmin ? 'Admin' : 'User'}</td>
                   </tr>
                 ))}
