@@ -74,6 +74,47 @@ export const addRadiusUser = (username: string, password: string): void => {
   }
 };
 
+// Add the missing registerRadiusUser function
+export const registerRadiusUser = (username: string, password: string, isAdmin: boolean = false): boolean => {
+  try {
+    if (!username || !password) {
+      console.error('Username and password are required');
+      return false;
+    }
+
+    // Get stored users
+    const storedUsers = localStorage.getItem(LOCAL_RADIUS_USERS_KEY);
+    const users = storedUsers ? JSON.parse(storedUsers) : [];
+    
+    // Check if user already exists
+    const existingUser = users.find((u: any) => u.username === username);
+    if (existingUser) {
+      console.error('User already exists');
+      return false;
+    }
+    
+    // Add new user
+    users.push({ username, password });
+    localStorage.setItem(LOCAL_RADIUS_USERS_KEY, JSON.stringify(users));
+    
+    // If user should be an admin, update RADIUS settings
+    if (isAdmin) {
+      const settings = getRadiusSettings();
+      if (settings) {
+        if (!settings.adminUsers.includes(username)) {
+          settings.adminUsers.push(username);
+          saveRadiusSettings(settings);
+        }
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error registering RADIUS user:', error);
+    return false;
+  }
+};
+
 // Check if RADIUS is configured
 export const isRadiusConfigured = (): boolean => {
   const settings = getRadiusSettings();
