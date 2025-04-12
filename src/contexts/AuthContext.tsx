@@ -1,9 +1,6 @@
 
-import React, { createContext, useContext } from 'react';
-import { User } from '@/services/storageService';
-import { useUserAuth } from '@/hooks/useUserAuth';
-import { useGuestMode } from '@/hooks/useGuestMode';
-import { useAdminRegistration } from '@/hooks/useAdminRegistration';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { User, authenticateUser, createUser, getAllUsers, getAdminSettings, updateAdminSettings } from '@/services/storageService';
 
 interface AuthContextType {
   user: Omit<User, 'passwordHash'> | null;
@@ -20,50 +17,120 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Use the extracted hooks
-  const { user, login, register: baseRegister, logout, isAuthenticated } = useUserAuth();
-  const { isGuest, continueAsGuest, exitGuestMode } = useGuestMode();
-  const { isRegistrationAllowed, users } = useAdminRegistration();
+  // 在加载时检查本地存储是否有已登录用户
+  const [user, setUser] = useState<Omit<User, 'passwordHash'> | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  
+  const [isGuest, setIsGuest] = useState<boolean>(() => {
+    return localStorage.getItem('guestMode') === 'true';
+  });
 
-  // Wrap the register function to handle guest mode and registration permissions
+  const [users, setUsers] = useState<Omit<User, 'passwordHash'>[]>(() => {
+    return getAllUsers();
+  });
+
+  const [isRegistrationAllowed, setIsRegistrationAllowed] = useState<boolean>(() => {
+    const settings = getAdminSettings();
+    return settings.allowRegistration;
+  });
+
+  // 监听管理员设置变化
+  useEffect(() => {
+    // 定期检查管理员设置
+    const checkAdminSettings = () => {
+      const settings = getAdminSettings();
+      setIsRegistrationAllowed(settings.allowRegistration);
+    };
+
+    const interval = setInterval(checkAdminSettings, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 加载时检查管理员设置
+  useEffect(() => {
+    const settings = getAdminSettings();
+    setIsRegistrationAllowed(settings.allowRegistration);
+  }, []);
+
+  // 定期刷新用户列表
+  useEffect(() => {
+    const refreshUsers = () => {
+      setUsers(getAllUsers());
+    };
+    
+    const interval = setInterval(refreshUsers, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isAuthenticated = !!user;
+
+  // 修改后的注册函数
   const register = (username: string, password: string, isAdmin = false): boolean => {
-    // Check if registration is allowed (unless creating an admin account with no users)
+    // 检查是否允许注册（除非是在没有用户时创建管理员账户）
     if (!isAdmin && !isRegistrationAllowed) {
       return false;
     }
 
-    const success = baseRegister(username, password, isAdmin);
+    // 基本验证
+    if (username.length < 3 || password.length < 6) {
+      return false;
+    }
+
+    // 使用数据库服务创建用户
+    const newUser = createUser(username, password, isAdmin);
     
-    if (success) {
-      // Exit guest mode when registering
-      exitGuestMode();
+    if (newUser) {
+      // 自动登录新用户
+      setUser(newUser);
+      setIsGuest(false);
+      localStorage.setItem('user', JSON.stringify(newUser));
+      localStorage.removeItem('guestMode');
+      
+      // 刷新用户列表
+      setUsers(getAllUsers());
+      
       return true;
     }
     
     return false;
   };
 
-  // Wrap the login function to handle guest mode
-  const enhancedLogin = (username: string, password: string): boolean => {
-    const success = login(username, password);
-    if (success) {
-      exitGuestMode();
+  // 修改后的登录函数
+  const login = (username: string, password: string): boolean => {
+    // 使用数据库服务验证用户
+    const authenticatedUser = authenticateUser(username, password);
+    
+    if (authenticatedUser) {
+      setUser(authenticatedUser);
+      setIsGuest(false);
+      localStorage.setItem('user', JSON.stringify(authenticatedUser));
+      localStorage.removeItem('guestMode');
+      return true;
     }
-    return success;
+    
+    return false;
   };
 
-  // Wrap the logout function to ensure guest mode is also cleared
-  const enhancedLogout = () => {
-    logout();
-    exitGuestMode();
+  const logout = () => {
+    setUser(null);
+    setIsGuest(false);
+    localStorage.removeItem('user');
+    localStorage.removeItem('guestMode');
+  };
+
+  const continueAsGuest = () => {
+    setIsGuest(true);
+    localStorage.setItem('guestMode', 'true');
   };
 
   return (
     <AuthContext.Provider value={{ 
       user, 
-      login: enhancedLogin, 
+      login, 
       register,
-      logout: enhancedLogout, 
+      logout, 
       isAuthenticated, 
       isGuest, 
       continueAsGuest,
