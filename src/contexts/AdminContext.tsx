@@ -1,42 +1,25 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getAdminSettings, updateAdminSettings, getAllUsers } from '@/services/storageService';
-
-interface AdminSettings {
-  allowRegistration: boolean;
-  dashboardUrl: string;
-}
+import { isRadiusConfigured } from '@/services/radiusService';
 
 interface AdminContextType {
-  settings: AdminSettings;
   isAdminSetupComplete: boolean;
-  updateSettings: (settings: Partial<AdminSettings>) => void;
   completeAdminSetup: () => void;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<AdminSettings>(() => {
-    return getAdminSettings();
-  });
-
-  // 檢查是否已經存在管理員帳號
+  // Use RADIUS config status to determine if admin setup is complete
   const [isAdminSetupComplete, setIsAdminSetupComplete] = useState<boolean>(() => {
-    // 只檢查是否存在管理員使用者，不再依賴localStorage
-    const adminUserExists = getAllUsers().some(user => user.isAdmin);
-    return adminUserExists;
+    return isRadiusConfigured();
   });
 
-  // 監控設置變化
+  // Check for RADIUS config periodically
   useEffect(() => {
     const checkSettings = () => {
-      const currentSettings = getAdminSettings();
-      setSettings(currentSettings);
-      
-      // 定期檢查是否存在管理員帳號
-      const adminUserExists = getAllUsers().some(user => user.isAdmin);
-      if (adminUserExists && !isAdminSetupComplete) {
+      const radiusConfigured = isRadiusConfigured();
+      if (radiusConfigured && !isAdminSetupComplete) {
         setIsAdminSetupComplete(true);
       }
     };
@@ -45,18 +28,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(interval);
   }, [isAdminSetupComplete]);
 
-  const updateSettings = (newSettings: Partial<AdminSettings>) => {
-    const updatedSettings = { ...settings, ...newSettings };
-    updateAdminSettings(updatedSettings);
-    setSettings(updatedSettings);
-  };
-
   const completeAdminSetup = () => {
     setIsAdminSetupComplete(true);
   };
 
   return (
-    <AdminContext.Provider value={{ settings, isAdminSetupComplete, updateSettings, completeAdminSetup }}>
+    <AdminContext.Provider value={{ isAdminSetupComplete, completeAdminSetup }}>
       {children}
     </AdminContext.Provider>
   );

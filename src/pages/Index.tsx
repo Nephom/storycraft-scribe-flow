@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import ChapterSidebar from '@/components/ChapterSidebar';
 import Editor from '@/components/Editor';
@@ -18,36 +19,38 @@ import {
   exportProject,
   downloadAsFile
 } from '@/services/storageService';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { User, Users } from 'lucide-react';
 
 const Index = () => {
   const [project, setProject] = useState<NovelProject | null>(null);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isGuest, users } = useAuth();
 
   useEffect(() => {
-    // 页面加载时尝试从 localStorage 加载项目
+    // Try to load project from localStorage when page loads
     const loadedProject = loadNovelProject();
     if (loadedProject) {
       setProject(loadedProject);
-      // 如果有章节，默认选中第一个
+      // Default to first chapter if available
       if (loadedProject.chapters.length > 0) {
         setActiveChapterId(loadedProject.chapters[0].id);
       }
     } else {
-      // 如果没有已保存的项目，创建一个新的
+      // Create new project if none exists
       const newProject = createNewProject();
       setProject(newProject);
       saveNovelProject(newProject);
     }
   }, []);
 
-  // 添加一个自动保存功能，只对已登录用户生效
+  // Auto-save for authenticated users
   useEffect(() => {
     if (project && isAuthenticated) {
       const intervalId = setInterval(() => {
         saveNovelProject(project);
-      }, 60000); // 每分钟自动保存一次
+      }, 60000); // Save every minute
       
       return () => clearInterval(intervalId);
     }
@@ -65,7 +68,7 @@ const Index = () => {
     setProject(updatedProject);
     saveNovelProject(updatedProject);
     
-    // 选择新创建的章节
+    // Select the newly created chapter
     const newChapterId = updatedProject.chapters[updatedProject.chapters.length - 1].id;
     setActiveChapterId(newChapterId);
   };
@@ -85,7 +88,7 @@ const Index = () => {
     setProject(updatedProject);
     saveNovelProject(updatedProject);
     
-    // 如果删除的是当前活动章节，则选择第一个章节或清除选择
+    // If deleted active chapter, select first chapter or clear selection
     if (chapterId === activeChapterId) {
       if (updatedProject.chapters.length > 0) {
         setActiveChapterId(updatedProject.chapters[0].id);
@@ -113,19 +116,70 @@ const Index = () => {
     if (!project) return;
     
     const markdown = exportProject(project);
-    const fileName = `${project.title || '我的小说'}.md`;
+    const fileName = `${project.title || '我的小說'}.md`;
     downloadAsFile(markdown, fileName, 'text/markdown');
     
     toast({
-      title: "导出成功",
-      description: `您的作品已导出为 ${fileName}`,
+      title: "導出成功",
+      description: `您的作品已導出為 ${fileName}`,
     });
   };
 
   if (!project) {
-    return <div className="flex justify-center items-center h-screen">加载中...</div>;
+    return <div className="flex justify-center items-center h-screen">加載中...</div>;
   }
 
+  // Show users list if guest or not authenticated
+  if (isGuest || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <header className="mb-8 text-center">
+            <h1 className="text-3xl font-bold mb-2">小說創作平台</h1>
+            <p className="text-gray-600">請選擇一個用戶查看其作品或登錄以編輯自己的作品</p>
+          </header>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                用戶列表
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {users.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  目前沒有用戶
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {users.map((u) => (
+                    <Link 
+                      to={`/user/${u.username}`} 
+                      key={u.username}
+                      className="flex items-center p-4 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors"
+                    >
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                        <User className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{u.username}</p>
+                        <p className="text-xs text-gray-500">
+                          {u.isAdmin ? '管理員' : '普通用戶'}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Show editor for authenticated users
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
