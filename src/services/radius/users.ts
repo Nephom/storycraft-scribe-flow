@@ -1,12 +1,11 @@
-
-import { getRadiusUsers, saveRadiusUsers } from './storage';
 import { getRadiusSettings, saveRadiusSettings } from './storage';
+import { getConfigUsers, addConfigUser, isRadiusAdmin, addConfigAdmin, getAllConfigUsers } from './config';
 import { RadiusUser } from './types';
 
 // User authentication
 export const authenticateWithRadius = (username: string, password: string): boolean => {
   try {
-    const users = getRadiusUsers();
+    const users = getConfigUsers();
     
     const user = users.find((u) => u.username === username);
     if (user && user.password === password) {
@@ -23,17 +22,7 @@ export const authenticateWithRadius = (username: string, password: string): bool
 // Add a user to RADIUS
 export const addRadiusUser = (username: string, password: string): void => {
   try {
-    const users = getRadiusUsers();
-    
-    const existingUserIndex = users.findIndex((u) => u.username === username);
-    
-    if (existingUserIndex >= 0) {
-      users[existingUserIndex] = { username, password };
-    } else {
-      users.push({ username, password });
-    }
-    
-    saveRadiusUsers(users);
+    addConfigUser(username, password);
   } catch (error) {
     console.error('添加RADIUS用戶錯誤:', error);
   }
@@ -47,7 +36,7 @@ export const registerRadiusUser = (username: string, password: string, isAdmin: 
       return false;
     }
 
-    const users = getRadiusUsers();
+    const users = getConfigUsers();
     
     const existingUser = users.find((u) => u.username === username);
     if (existingUser) {
@@ -55,10 +44,12 @@ export const registerRadiusUser = (username: string, password: string, isAdmin: 
       return false;
     }
     
-    users.push({ username, password });
-    saveRadiusUsers(users);
+    addConfigUser(username, password);
     
     if (isAdmin) {
+      addConfigAdmin(username);
+      
+      // Keep settings synchronized
       const settings = getRadiusSettings();
       if (settings) {
         if (!settings.adminUsers.includes(username)) {
@@ -77,5 +68,5 @@ export const registerRadiusUser = (username: string, password: string, isAdmin: 
 
 // Get all RADIUS users
 export const getAllRadiusUsers = (): RadiusUser[] => {
-  return getRadiusUsers();
+  return getAllConfigUsers();
 };

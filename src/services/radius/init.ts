@@ -1,7 +1,7 @@
 
 import { RadiusSettings } from './types';
-import { saveRadiusSettings, getRadiusSettings, LOCAL_RADIUS_USERS_KEY, LOCAL_RADIUS_CONFIG_STATUS, LOCAL_RADIUS_SETTINGS_KEY } from './storage';
-import { checkGlobalRadiusStatus, setGlobalRadiusConfigured } from './config';
+import { saveRadiusSettings, getRadiusSettings, LOCAL_RADIUS_CONFIG_STATUS, GLOBAL_RADIUS_CONFIG_KEY } from './storage';
+import { checkGlobalRadiusStatus, setGlobalRadiusConfigured, addConfigAdmin } from './config';
 
 // Initialize RADIUS service
 export const initializeRadiusService = async (): Promise<void> => {
@@ -26,6 +26,11 @@ export const initializeRadiusService = async (): Promise<void> => {
           setupDate: new Date().toISOString()
         };
         saveRadiusSettings(defaultSettings);
+      } else {
+        // Sync admin users with config
+        settings.adminUsers.forEach(admin => {
+          addConfigAdmin(admin);
+        });
       }
       return;
     }
@@ -50,16 +55,11 @@ export const initializeRadiusService = async (): Promise<void> => {
       };
       saveRadiusSettings(defaultSettings);
       console.log("創建默認RADIUS設置");
-    }
-    
-    // Initialize users if needed
-    const users = localStorage.getItem(LOCAL_RADIUS_USERS_KEY);
-    if (!users) {
-      localStorage.setItem(LOCAL_RADIUS_USERS_KEY, JSON.stringify([]));
-      console.log("初始化用户数据库完成，加载了 0 个用户");
     } else {
-      const userCount = JSON.parse(users).length;
-      console.log(`初始化用户数据库完成，加载了 ${userCount} 个用户`);
+      // Sync admin users with config
+      settings.adminUsers.forEach(admin => {
+        addConfigAdmin(admin);
+      });
     }
     
     // Set default config status if not present

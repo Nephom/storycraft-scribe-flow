@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,8 @@ import {
   isRadiusConfigured, 
   addRadiusUser,
   initializeRadiusService,
-  clearRadiusConfiguration // 导入清除配置方法（用于测试）
+  clearRadiusConfiguration,
+  setGlobalRadiusConfigured
 } from '@/services/radiusService';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,7 +30,6 @@ const RadiusSetup = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // 初始化并检查RADIUS服务配置状态
   useEffect(() => {
     const checkStatus = async () => {
       setIsChecking(true);
@@ -39,7 +38,6 @@ const RadiusSetup = () => {
       setIsConfigured(configured);
       setIsChecking(false);
       
-      // 如果已配置且处于全局检查模式，跳转到主页
       if (configured && isGlobalCheck) {
         setTimeout(() => {
           navigate('/');
@@ -50,17 +48,15 @@ const RadiusSetup = () => {
     checkStatus();
   }, [navigate, isGlobalCheck]);
   
-  // 如果正在检查配置状态，显示加载指示器
   if (isChecking) {
     return (
       <div className="flex flex-col gap-4 items-center justify-center min-h-screen bg-gray-50 p-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="text-gray-600">正在检查RADIUS配置状态...</p>
+        <p className="text-gray-600">正在檢查RADIUS配置狀態...</p>
       </div>
     );
   }
   
-  // 如果RADIUS已配置，显示状态并自动跳转到首页
   if (isConfigured) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
@@ -70,10 +66,10 @@ const RadiusSetup = () => {
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               RADIUS 已配置
             </CardTitle>
-            <CardDescription>RADIUS服务已经配置完成，无需重新设置</CardDescription>
+            <CardDescription>RADIUS服務已經配置完成，无需重新设置</CardDescription>
           </CardHeader>
           <CardContent className="pb-6">
-            <p className="text-gray-600 mb-4">系统检测到RADIUS服务已经配置完成，将自动跳转到主页。</p>
+            <p className="text-gray-600 mb-4">系統检测到RADIUS服务已经配置完成，将自动跳转到主页。</p>
           </CardContent>
           <CardFooter>
             <Button onClick={() => navigate('/')} className="w-full">
@@ -90,7 +86,6 @@ const RadiusSetup = () => {
     setIsSubmitting(true);
 
     try {
-      // 验证输入
       if (!serverUrl || !serverPort || !sharedSecret) {
         toast({
           variant: "destructive",
@@ -111,25 +106,24 @@ const RadiusSetup = () => {
         return;
       }
 
-      // 保存RADIUS设置
       saveRadiusSettings({
         serverUrl,
         serverPort: parseInt(serverPort),
         sharedSecret,
         adminUsers: isAdmin ? [testUsername] : [],
-        isConfigured: true,  // 标记为已配置
+        isConfigured: true,
         setupDate: new Date().toISOString()
       });
 
-      // 添加测试用户到模拟RADIUS
       addRadiusUser(testUsername, testPassword);
+      
+      setGlobalRadiusConfigured(true);
 
       toast({
         title: "成功",
         description: "RADIUS設定已保存，系統已準備就緒",
       });
 
-      // 跳转到首页
       setTimeout(() => {
         navigate('/login');
       }, 1000);
@@ -144,7 +138,6 @@ const RadiusSetup = () => {
     }
   };
 
-  // 清除配置按钮（仅用于测试）
   const handleClearConfig = () => {
     clearRadiusConfiguration();
     toast({
@@ -237,7 +230,6 @@ const RadiusSetup = () => {
               {isSubmitting ? '處理中...' : '保存並繼續'}
             </Button>
             
-            {/* 测试按钮 - 仅在开发环境中显示 */}
             {import.meta.env.DEV && (
               <Button 
                 type="button" 
@@ -246,7 +238,7 @@ const RadiusSetup = () => {
                 className="w-full mt-2" 
                 onClick={handleClearConfig}
               >
-                清除配置（仅用于测试）
+                清除配置（僅用于測試）
               </Button>
             )}
           </CardFooter>

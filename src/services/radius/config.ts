@@ -1,9 +1,12 @@
 
+import { RadiusSettings, RadiusUser } from './types';
 import { getRadiusSettings } from './storage';
 import { LOCAL_RADIUS_CONFIG_STATUS, GLOBAL_RADIUS_CONFIG_KEY } from './storage';
 
-// Global configuration flag
+// Global configuration flags and data
 let globalRadiusConfigured = false;
+let globalRadiusUsers: RadiusUser[] = [];
+let globalRadiusAdmins: string[] = [];
 
 // Check if RADIUS is configured
 export const isRadiusConfigured = (): boolean => {
@@ -39,6 +42,37 @@ export const isRadiusConfigured = (): boolean => {
   }
 };
 
+// Get all radius users (from memory, not localStorage)
+export const getConfigUsers = (): RadiusUser[] => {
+  return globalRadiusUsers;
+};
+
+// Add or update a user in memory
+export const addConfigUser = (username: string, password: string): void => {
+  const existingUserIndex = globalRadiusUsers.findIndex(u => u.username === username);
+  
+  if (existingUserIndex >= 0) {
+    globalRadiusUsers[existingUserIndex] = { username, password };
+  } else {
+    globalRadiusUsers.push({ username, password });
+  }
+  
+  console.log(`用户 ${username} 已添加到全局配置中`);
+};
+
+// Add a user to admin list
+export const addConfigAdmin = (username: string): void => {
+  if (!globalRadiusAdmins.includes(username)) {
+    globalRadiusAdmins.push(username);
+    console.log(`用户 ${username} 已添加为管理员`);
+  }
+};
+
+// Check if a user is a RADIUS admin
+export const isRadiusAdmin = (username: string): boolean => {
+  return globalRadiusAdmins.includes(username) || false;
+};
+
 // Check for global configuration status
 export const checkGlobalRadiusStatus = async (): Promise<boolean> => {
   try {
@@ -59,13 +93,12 @@ export const checkGlobalRadiusStatus = async (): Promise<boolean> => {
   }
 };
 
-// Check if a user is a RADIUS admin
-export const isRadiusAdmin = (username: string): boolean => {
-  const settings = getRadiusSettings();
-  return settings?.adminUsers.includes(username) || false;
-};
-
 // Set global configuration status
 export const setGlobalRadiusConfigured = (value: boolean): void => {
   globalRadiusConfigured = value;
+};
+
+// Get all users for admin view
+export const getAllConfigUsers = (): RadiusUser[] => {
+  return globalRadiusUsers;
 };
