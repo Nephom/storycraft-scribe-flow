@@ -27,7 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Check for logged-in user in local storage
+  // 从本地存储中检查登录用户
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -39,10 +39,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [users, setUsers] = useState<User[]>([]);
 
-  // Periodically refresh users list
+  // 定期刷新用户列表
   useEffect(() => {
     const refreshUsers = () => {
-      // Get all users from RADIUS (for demo purposes)
+      // 从RADIUS获取所有用户（用于演示）
       const radiusUsers = getAllRadiusUsers();
       const formattedUsers = radiusUsers.map((u: any) => ({
         username: u.username,
@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUsers(formattedUsers);
     };
     
-    refreshUsers(); // Load users immediately
+    refreshUsers(); // 立即加载用户
     const interval = setInterval(refreshUsers, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthenticated = !!user;
 
   const login = (username: string, password: string): boolean => {
-    // Authenticate using RADIUS
+    // 使用RADIUS认证
     const isAuthenticated = authenticateWithRadius(username, password);
     
     if (isAuthenticated) {
@@ -76,11 +76,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = (username: string, password: string, isAdmin: boolean = false): boolean => {
-    // Register user using RADIUS
+    // 使用RADIUS注册用户
     const success = registerRadiusUser(username, password, isAdmin);
     
     if (success) {
-      // Automatically log in the user after registration
+      // 注册后自动登录用户
       const userObj = { username, isAdmin };
       setUser(userObj);
       setIsGuest(false);

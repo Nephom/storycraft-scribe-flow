@@ -1,23 +1,46 @@
-
 interface RadiusSettings {
   serverUrl: string;
   serverPort: number;
   sharedSecret: string;
   adminUsers: string[];
-  isConfigured: boolean; // Add a flag to track configuration status
-  setupDate: string;     // Track when the setup was completed
+  isConfigured: boolean;
+  setupDate: string;
 }
 
-// Configuration keys
 const LOCAL_RADIUS_SETTINGS_KEY = 'radius-settings';
 const LOCAL_RADIUS_USERS_KEY = 'radius-users';
 const LOCAL_RADIUS_CONFIG_STATUS = 'radius-config-status';
 
-// Initialize RADIUS service
-export const initializeRadiusService = (): void => {
+let globalRadiusConfigured = false;
+
+export const initializeRadiusService = async (): Promise<void> => {
   try {
     console.log("初始化RADIUS服務...");
-    // Check if RADIUS settings exist, if not, create default empty settings
+    
+    if (globalRadiusConfigured) {
+      console.log("检测到全局RADIUS配置已完成");
+      localStorage.setItem(LOCAL_RADIUS_CONFIG_STATUS, 'true');
+      const settings = localStorage.getItem(LOCAL_RADIUS_SETTINGS_KEY);
+      if (!settings) {
+        const defaultSettings: RadiusSettings = {
+          serverUrl: 'localhost',
+          serverPort: 1812,
+          sharedSecret: 'default-shared-secret',
+          adminUsers: [],
+          isConfigured: true,
+          setupDate: new Date().toISOString()
+        };
+        localStorage.setItem(LOCAL_RADIUS_SETTINGS_KEY, JSON.stringify(defaultSettings));
+      }
+      return;
+    }
+    
+    const configStatus = localStorage.getItem(LOCAL_RADIUS_CONFIG_STATUS);
+    if (configStatus === 'true') {
+      globalRadiusConfigured = true;
+      console.log("本地RADIUS配置已完成，设置全局标志");
+    }
+    
     const settings = localStorage.getItem(LOCAL_RADIUS_SETTINGS_KEY);
     if (!settings) {
       const defaultSettings: RadiusSettings = {
@@ -32,7 +55,6 @@ export const initializeRadiusService = (): void => {
       console.log("創建默認RADIUS設置");
     }
     
-    // Initialize users storage if it doesn't exist
     const users = localStorage.getItem(LOCAL_RADIUS_USERS_KEY);
     if (!users) {
       localStorage.setItem(LOCAL_RADIUS_USERS_KEY, JSON.stringify([]));
@@ -42,16 +64,35 @@ export const initializeRadiusService = (): void => {
       console.log(`初始化用户数据库完成，加载了 ${userCount} 个用户`);
     }
     
-    // Create a separate configuration status marker
     if (!localStorage.getItem(LOCAL_RADIUS_CONFIG_STATUS)) {
       localStorage.setItem(LOCAL_RADIUS_CONFIG_STATUS, 'false');
     }
+    
+    await checkGlobalRadiusStatus();
   } catch (error) {
     console.error('RADIUS服務初始化錯誤:', error);
   }
 };
 
-// Get RADIUS settings
+const checkGlobalRadiusStatus = async (): Promise<boolean> => {
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const status = localStorage.getItem('global-radius-configured');
+    
+    if (status === 'true') {
+      globalRadiusConfigured = true;
+      console.log("服务器报告全局RADIUS已配置");
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('检查全局RADIUS状态出错:', error);
+    return false;
+  }
+};
+
 export const getRadiusSettings = (): RadiusSettings | null => {
   try {
     const settings = localStorage.getItem(LOCAL_RADIUS_SETTINGS_KEY);
@@ -62,31 +103,26 @@ export const getRadiusSettings = (): RadiusSettings | null => {
   }
 };
 
-// Save RADIUS settings
 export const saveRadiusSettings = (settings: RadiusSettings): void => {
   try {
-    // Update the isConfigured flag and setup date
     settings.isConfigured = true;
     settings.setupDate = new Date().toISOString();
     
     localStorage.setItem(LOCAL_RADIUS_SETTINGS_KEY, JSON.stringify(settings));
-    // Also update the separate configuration status marker
     localStorage.setItem(LOCAL_RADIUS_CONFIG_STATUS, 'true');
-    console.log("RADIUS設置已保存，配置狀態已更新");
+    globalRadiusConfigured = true;
+    localStorage.setItem('global-radius-configured', 'true');
+    console.log("RADIUS設置已保存，全局配置狀態已更新");
   } catch (error) {
     console.error('保存RADIUS設置錯誤:', error);
   }
 };
 
-// In a real app, this would communicate with an actual RADIUS server
-// For this demo, we'll simulate it
 export const authenticateWithRadius = (username: string, password: string): boolean => {
   try {
-    // Get stored users to simulate RADIUS authentication
     const storedUsers = localStorage.getItem(LOCAL_RADIUS_USERS_KEY);
     const users = storedUsers ? JSON.parse(storedUsers) : [];
     
-    // Simulate RADIUS authentication
     const user = users.find((u: any) => u.username === username);
     if (user && user.password === password) {
       return true;
@@ -99,20 +135,16 @@ export const authenticateWithRadius = (username: string, password: string): bool
   }
 };
 
-// For demo purposes, add a test user to our simulated RADIUS server
 export const addRadiusUser = (username: string, password: string): void => {
   try {
     const storedUsers = localStorage.getItem(LOCAL_RADIUS_USERS_KEY);
     const users = storedUsers ? JSON.parse(storedUsers) : [];
     
-    // Check if user already exists
     const existingUserIndex = users.findIndex((u: any) => u.username === username);
     
     if (existingUserIndex >= 0) {
-      // Update existing user
       users[existingUserIndex] = { username, password };
     } else {
-      // Add new user
       users.push({ username, password });
     }
     
@@ -122,7 +154,6 @@ export const addRadiusUser = (username: string, password: string): void => {
   }
 };
 
-// Register a new RADIUS user
 export const registerRadiusUser = (username: string, password: string, isAdmin: boolean = false): boolean => {
   try {
     if (!username || !password) {
@@ -130,22 +161,18 @@ export const registerRadiusUser = (username: string, password: string, isAdmin: 
       return false;
     }
 
-    // Get stored users
     const storedUsers = localStorage.getItem(LOCAL_RADIUS_USERS_KEY);
     const users = storedUsers ? JSON.parse(storedUsers) : [];
     
-    // Check if user already exists
     const existingUser = users.find((u: any) => u.username === username);
     if (existingUser) {
       console.error('用戶已存在');
       return false;
     }
     
-    // Add new user
     users.push({ username, password });
     localStorage.setItem(LOCAL_RADIUS_USERS_KEY, JSON.stringify(users));
     
-    // If user should be an admin, update RADIUS settings
     if (isAdmin) {
       const settings = getRadiusSettings();
       if (settings) {
@@ -163,20 +190,40 @@ export const registerRadiusUser = (username: string, password: string, isAdmin: 
   }
 };
 
-// Check if RADIUS is configured
+export const clearRadiusConfiguration = (): void => {
+  try {
+    localStorage.removeItem(LOCAL_RADIUS_SETTINGS_KEY);
+    localStorage.removeItem(LOCAL_RADIUS_CONFIG_STATUS);
+    localStorage.removeItem('global-radius-configured');
+    globalRadiusConfigured = false;
+    console.log("RADIUS配置已清除");
+  } catch (error) {
+    console.error('清除RADIUS配置錯誤:', error);
+  }
+};
+
 export const isRadiusConfigured = (): boolean => {
   try {
-    // Check the separate configuration status marker first (more reliable)
+    if (globalRadiusConfigured) {
+      return true;
+    }
+    
     const configStatus = localStorage.getItem(LOCAL_RADIUS_CONFIG_STATUS);
     if (configStatus === 'true') {
       return true;
     }
     
-    // Fallback to checking settings object
     const settings = getRadiusSettings();
     if (settings && settings.isConfigured) {
-      // Ensure the configuration status marker is synced
       localStorage.setItem(LOCAL_RADIUS_CONFIG_STATUS, 'true');
+      globalRadiusConfigured = true;
+      localStorage.setItem('global-radius-configured', 'true');
+      return true;
+    }
+    
+    const globalConfigured = localStorage.getItem('global-radius-configured');
+    if (globalConfigured === 'true') {
+      globalRadiusConfigured = true;
       return true;
     }
     
@@ -187,13 +234,11 @@ export const isRadiusConfigured = (): boolean => {
   }
 };
 
-// Check if user is an admin
 export const isRadiusAdmin = (username: string): boolean => {
   const settings = getRadiusSettings();
   return settings?.adminUsers.includes(username) || false;
 };
 
-// Get all RADIUS users (for demo purposes)
 export const getAllRadiusUsers = () => {
   try {
     const storedUsers = localStorage.getItem(LOCAL_RADIUS_USERS_KEY);

@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth, useIsRadiusReady } from "./contexts/AuthContext";
 import { AdminProvider } from "./contexts/AdminContext";
-import { useEffect } from "react";
-import { initializeRadiusService } from "./services/radiusService";
+import { useEffect, useState } from "react";
+import { initializeRadiusService, isRadiusConfigured } from "./services/radiusService";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -15,12 +15,10 @@ import RadiusSetup from "./pages/RadiusSetup";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserPreview from "./pages/UserPreview";
 
-// Initialize the service
-initializeRadiusService();
-
+// 创建查询客户端
 const queryClient = new QueryClient();
 
-// Protected route component for regular users
+// 受保护路由组件
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isGuest } = useAuth();
   
@@ -31,7 +29,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Protected route specifically for admins
+// 管理员路由
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   
@@ -42,16 +40,44 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const AppRoutes = () => {
-  const { users } = useAuth();
-  const isRadiusReady = useIsRadiusReady();
+// 初始化App并检查RADIUS服务状态
+const AppWithProviders = () => {
+  // 这里使用useState而不是直接调用函数，以避免无限循环
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isRadiusReady, setIsRadiusReady] = useState(false);
   
-  // Recheck RADIUS service on component mount
+  // 初始化RADIUS服务
   useEffect(() => {
-    initializeRadiusService();
+    const init = async () => {
+      await initializeRadiusService();
+      setIsRadiusReady(isRadiusConfigured());
+      setIsInitialized(true);
+    };
+    
+    init();
   }, []);
   
-  // If RADIUS is not configured, force setup
+  // 显示加载指示器，直到初始化完成
+  if (!isInitialized) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes isRadiusReady={isRadiusReady} />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+};
+
+// 应用路由
+const AppRoutes = ({ isRadiusReady }: { isRadiusReady: boolean }) => {
+  // 如果RADIUS未配置，强制设置
   if (!isRadiusReady) {
     return (
       <Routes>
@@ -71,23 +97,19 @@ const AppRoutes = () => {
           <Index />
         </ProtectedRoute>
       } />
-      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
 
+// 主应用组件
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AdminProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </AuthProvider>
+        <Toaster />
+        <Sonner />
+        <AppWithProviders />
       </AdminProvider>
     </TooltipProvider>
   </QueryClientProvider>
