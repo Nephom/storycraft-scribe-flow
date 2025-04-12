@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   saveRadiusSettings, 
   isRadiusConfigured, 
-  addRadiusUser 
+  addRadiusUser,
+  initializeRadiusService
 } from '@/services/radiusService';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,11 +22,18 @@ const RadiusSetup = () => {
   const [testPassword, setTestPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Initialize RADIUS service and check configuration status
+  useEffect(() => {
+    initializeRadiusService();
+    setIsConfigured(isRadiusConfigured());
+  }, []);
+  
   // If RADIUS is already configured, redirect to homepage
-  if (isRadiusConfigured()) {
+  if (isConfigured) {
     return <Navigate to="/" />;
   }
 
@@ -60,7 +68,9 @@ const RadiusSetup = () => {
         serverUrl,
         serverPort: parseInt(serverPort),
         sharedSecret,
-        adminUsers: isAdmin ? [testUsername] : []
+        adminUsers: isAdmin ? [testUsername] : [],
+        isConfigured: true,  // Mark as configured
+        setupDate: new Date().toISOString()
       });
 
       // Add test user to simulated RADIUS for demo
@@ -76,7 +86,7 @@ const RadiusSetup = () => {
         navigate('/login');
       }, 1000);
     } catch (error) {
-      console.error('Error during RADIUS setup:', error);
+      console.error('設定RADIUS時發生錯誤:', error);
       toast({
         variant: "destructive",
         title: "錯誤",

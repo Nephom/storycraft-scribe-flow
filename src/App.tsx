@@ -6,12 +6,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth, useIsRadiusReady } from "./contexts/AuthContext";
 import { AdminProvider } from "./contexts/AdminContext";
+import { useEffect } from "react";
+import { initializeRadiusService } from "./services/radiusService";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import RadiusSetup from "./pages/RadiusSetup";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserPreview from "./pages/UserPreview";
+
+// Initialize the service
+initializeRadiusService();
 
 const queryClient = new QueryClient();
 
@@ -40,6 +45,11 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => {
   const { users } = useAuth();
   const isRadiusReady = useIsRadiusReady();
+  
+  // Recheck RADIUS service on component mount
+  useEffect(() => {
+    initializeRadiusService();
+  }, []);
   
   // If RADIUS is not configured, force setup
   if (!isRadiusReady) {
