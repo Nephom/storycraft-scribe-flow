@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -18,6 +17,7 @@ import {
   exportProject,
   downloadAsFile
 } from '@/services/storageService';
+import { NovelProject, Chapter } from '@/types';
 
 const UserNovel: React.FC = () => {
   const [project, setProject] = useState<NovelProject | null>(null);

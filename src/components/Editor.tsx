@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, FileText, BookOpen } from "lucide-react";
+import { Chapter } from "@/types";
 
 interface EditorProps {
   activeChapter: Chapter | null;

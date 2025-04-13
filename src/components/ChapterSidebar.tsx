@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Book, FileText, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Chapter } from "@/types";
 
 interface ChapterSidebarProps {
   chapters: Chapter[];
