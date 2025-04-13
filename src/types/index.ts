@@ -12,3 +12,19 @@ interface NovelProject {
   chapters: Chapter[];
   lastSaved: number;
 }
+
+interface User {
+  id: string;
+  username: string;
+  passwordHash: string;
+  isAdmin: boolean;
+  createdAt: number;
+  novels: NovelProject[];
+}
+
+interface AppSettings {
+  allowRegistration: boolean;
+  setupCompleted: boolean;
+}
+
+export type { Chapter, NovelProject, User, AppSettings };

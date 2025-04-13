@@ -5,6 +5,10 @@ import ChapterSidebar from '@/components/ChapterSidebar';
 import Editor from '@/components/Editor';
 import Navbar from '@/components/Navbar';
 import { useToast } from "@/hooks/use-toast";
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUser } from '@/services/dbService';
+import { NovelProject, Chapter } from '@/types';
 import { 
   loadNovelProject, 
   saveNovelProject, 
@@ -20,10 +24,36 @@ import {
 const Index = () => {
   const [project, setProject] = useState<NovelProject | null>(null);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const { toast } = useToast();
+  const { userId } = useParams<{ userId: string }>();
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // 页面加载时尝试从 localStorage 加载项目
+    // Check if trying to access another user's data without being logged in
+    if (!userId) {
+      navigate('/');
+      return;
+    }
+    
+    // Get the target user
+    const targetUser = getUser(userId);
+    if (!targetUser) {
+      toast({
+        title: "错误",
+        description: "找不到指定的用户",
+        variant: "destructive",
+      });
+      navigate('/');
+      return;
+    }
+    
+    // Set read-only mode if current user is not the owner
+    const isOwner = currentUser && currentUser.id === userId;
+    setIsReadOnly(!isOwner);
+    
+    // 尝试从 localStorage 加载项目
     const loadedProject = loadNovelProject();
     if (loadedProject) {
       setProject(loadedProject);
@@ -35,20 +65,22 @@ const Index = () => {
       // 如果没有已保存的项目，创建一个新的
       const newProject = createNewProject();
       setProject(newProject);
-      saveNovelProject(newProject);
+      if (isOwner) {
+        saveNovelProject(newProject);
+      }
     }
-  }, []);
+  }, [userId, currentUser, navigate, toast]);
 
   // 添加一个自动保存功能
   useEffect(() => {
-    if (project) {
+    if (project && !isReadOnly) {
       const intervalId = setInterval(() => {
         saveNovelProject(project);
       }, 60000); // 每分钟自动保存一次
       
       return () => clearInterval(intervalId);
     }
-  }, [project]);
+  }, [project, isReadOnly]);
 
   const getActiveChapter = (): Chapter | null => {
     if (!project || !activeChapterId) return null;
@@ -56,7 +88,7 @@ const Index = () => {
   };
 
   const handleAddChapter = (title: string) => {
-    if (!project) return;
+    if (!project || isReadOnly) return;
     
     const updatedProject = addChapter(project, title);
     setProject(updatedProject);
@@ -68,7 +100,7 @@ const Index = () => {
   };
 
   const handleUpdateChapter = (chapterId: string, content: string) => {
-    if (!project) return;
+    if (!project || isReadOnly) return;
     
     const updatedProject = updateChapterService(project, chapterId, content);
     setProject(updatedProject);
@@ -76,7 +108,7 @@ const Index = () => {
   };
 
   const handleDeleteChapter = (chapterId: string) => {
-    if (!project) return;
+    if (!project || isReadOnly) return;
     
     const updatedProject = deleteChapterService(project, chapterId);
     setProject(updatedProject);
@@ -93,7 +125,7 @@ const Index = () => {
   };
 
   const handleRenameChapter = (chapterId: string, newTitle: string) => {
-    if (!project) return;
+    if (!project || isReadOnly) return;
     
     const updatedProject = renameChapterService(project, chapterId, newTitle);
     setProject(updatedProject);
@@ -101,7 +133,7 @@ const Index = () => {
   };
 
   const handleSaveAll = () => {
-    if (project) {
+    if (project && !isReadOnly) {
       saveNovelProject(project);
     }
   };
@@ -133,6 +165,7 @@ const Index = () => {
           onAddChapter={handleAddChapter}
           onDeleteChapter={handleDeleteChapter}
           onRenameChapter={handleRenameChapter}
+          readOnly={isReadOnly}
         />
         
         <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -140,12 +173,14 @@ const Index = () => {
             projectTitle={project.title}
             onSaveAll={handleSaveAll}
             onExport={handleExport}
+            readOnly={isReadOnly}
           />
           
           <div className="flex-1 overflow-hidden">
             <Editor 
               activeChapter={getActiveChapter()}
               updateChapter={handleUpdateChapter}
+              readOnly={isReadOnly}
             />
           </div>
         </div>
