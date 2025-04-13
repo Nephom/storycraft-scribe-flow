@@ -1,42 +1,28 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import type { NovelProject, Chapter } from '../types';
 
 const LOCAL_STORAGE_KEY = 'novel-writer-data';
 
-export const saveNovelProject = (project: NovelProject, userId: string): void => {
+export const saveNovelProject = (project: NovelProject): void => {
   try {
-    const userProjects = getUserProjects();
-    userProjects[userId] = {
+    const serialized = JSON.stringify({
       ...project,
       lastSaved: Date.now()
-    };
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userProjects));
+    });
+    localStorage.setItem(LOCAL_STORAGE_KEY, serialized);
   } catch (error) {
     console.error('Error saving data to localStorage:', error);
   }
 };
 
-export const loadNovelProject = (userId: string): NovelProject | null => {
+export const loadNovelProject = (): NovelProject | null => {
   try {
-    const userProjects = getUserProjects();
-    if (!userProjects[userId]) return null;
-    return userProjects[userId] as NovelProject;
+    const serialized = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!serialized) return null;
+    return JSON.parse(serialized) as NovelProject;
   } catch (error) {
     console.error('Error loading data from localStorage:', error);
     return null;
-  }
-};
-
-// Helper to get all user projects
-const getUserProjects = (): Record<string, NovelProject> => {
-  try {
-    const serialized = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!serialized) return {};
-    return JSON.parse(serialized) as Record<string, NovelProject>;
-  } catch (error) {
-    console.error('Error loading projects from localStorage:', error);
-    return {};
   }
 };
 

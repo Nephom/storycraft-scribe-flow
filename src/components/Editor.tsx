@@ -7,39 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, FileText, BookOpen } from "lucide-react";
-import { Chapter } from "@/types";
 
 interface EditorProps {
   activeChapter: Chapter | null;
   updateChapter: (id: string, content: string) => void;
-  readOnly?: boolean;
 }
 
-const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter, readOnly = false }) => {
+const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter }) => {
   const [content, setContent] = useState("");
   const [fontSize, setFontSize] = useState("16");
   const [fontFamily, setFontFamily] = useState("sans");
-  const [wordCount, setWordCount] = useState(0);
-  const [charCount, setCharCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
     if (activeChapter) {
       setContent(activeChapter.content);
-      
-      // Calculate word and character count
-      const text = activeChapter.content;
-      setCharCount(text.length);
-      setWordCount(text.trim() === '' ? 0 : text.trim().split(/\s+/).length);
     } else {
       setContent("");
-      setWordCount(0);
-      setCharCount(0);
     }
   }, [activeChapter]);
 
   const handleSave = () => {
-    if (activeChapter && !readOnly) {
+    if (activeChapter) {
       updateChapter(activeChapter.id, content);
       toast({
         title: "已保存",
@@ -49,12 +38,7 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter, readOnly 
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setContent(newContent);
-    
-    // Update word and character count
-    setCharCount(newContent.length);
-    setWordCount(newContent.trim() === '' ? 0 : newContent.trim().split(/\s+/).length);
+    setContent(e.target.value);
   };
 
   const fontStyles = {
@@ -80,7 +64,7 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter, readOnly 
     <div className="h-full flex flex-col">
       <div className="flex justify-between items-center p-4 border-b">
         <div className="flex items-center gap-4">
-          <Select value={fontFamily} onValueChange={setFontFamily} disabled={readOnly}>
+          <Select value={fontFamily} onValueChange={setFontFamily}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="字体" />
             </SelectTrigger>
@@ -91,7 +75,7 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter, readOnly 
             </SelectContent>
           </Select>
           
-          <Select value={fontSize} onValueChange={setFontSize} disabled={readOnly}>
+          <Select value={fontSize} onValueChange={setFontSize}>
             <SelectTrigger className="w-24">
               <SelectValue placeholder="字号" />
             </SelectTrigger>
@@ -106,17 +90,15 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter, readOnly 
           </Select>
         </div>
         
-        {!readOnly && (
-          <Button onClick={handleSave} variant="outline" size="sm">
-            <Save className="mr-2 h-4 w-4" />
-            保存
-          </Button>
-        )}
+        <Button onClick={handleSave} variant="outline" size="sm">
+          <Save className="mr-2 h-4 w-4" />
+          保存
+        </Button>
       </div>
 
       <Tabs defaultValue="write" className="flex-1 flex flex-col">
         <TabsList className="mx-4 mt-2">
-          <TabsTrigger value="write" className="flex items-center" disabled={readOnly}>
+          <TabsTrigger value="write" className="flex items-center">
             <FileText className="mr-2 h-4 w-4" />
             编辑
           </TabsTrigger>
@@ -134,7 +116,6 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter, readOnly 
               className="w-full h-full min-h-[calc(100vh-250px)] resize-none border-0 focus-visible:ring-0 p-0"
               placeholder="开始撰写您的小说..."
               style={fontStyles}
-              readOnly={readOnly}
             />
           </div>
         </TabsContent>
@@ -145,10 +126,6 @@ const Editor: React.FC<EditorProps> = ({ activeChapter, updateChapter, readOnly 
           </div>
         </TabsContent>
       </Tabs>
-      
-      <div className="p-2 text-xs text-muted-foreground text-right border-t">
-        字数: {wordCount} | 字符: {charCount}
-      </div>
     </div>
   );
 };

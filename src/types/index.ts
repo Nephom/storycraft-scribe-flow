@@ -1,5 +1,5 @@
 
-export interface Chapter {
+interface Chapter {
   id: string;
   title: string;
   content: string;
@@ -7,27 +7,8 @@ export interface Chapter {
   updatedAt: number;
 }
 
-export interface NovelProject {
+interface NovelProject {
   title: string;
   chapters: Chapter[];
   lastSaved: number;
-}
-
-export interface User {
-  id: string;
-  username: string;
-  isAdmin: boolean;
-  novels: NovelProject[];
-}
-
-export interface RadiusSettings {
-  server: string;
-  port: number;
-  secret: string;
-  enabled: boolean;
-}
-
-export interface AppSettings {
-  allowRegistration: boolean;
-  radiusConfigured: boolean;
 }
