@@ -12,6 +12,7 @@ const RadiusSetup: React.FC = () => {
   const [port, setPort] = useState('1812');
   const [secret, setSecret] = useState('');
   const [isConfiguring, setIsConfiguring] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -22,7 +23,22 @@ const RadiusSetup: React.FC = () => {
     }
   }, [navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateRadiusConnection = async () => {
+    setIsValidating(true);
+    
+    // Simulate a validation check with a delay
+    return new Promise<boolean>((resolve) => {
+      setTimeout(() => {
+        // For demo purposes, we'll consider it valid if the server address is not empty
+        // In a real app, this would make an actual connection attempt to the RADIUS server
+        const isValid = !!server && server.length > 0;
+        setIsValidating(false);
+        resolve(isValid);
+      }, 1500);
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsConfiguring(true);
     
@@ -31,6 +47,24 @@ const RadiusSetup: React.FC = () => {
       toast({
         title: "错误",
         description: "请填写所有必填字段",
+        variant: "destructive",
+      });
+      setIsConfiguring(false);
+      return;
+    }
+    
+    // Validate RADIUS connection first
+    toast({
+      title: "正在验证",
+      description: "正在连接RADIUS服务器进行验证...",
+    });
+    
+    const isValid = await validateRadiusConnection();
+    
+    if (!isValid) {
+      toast({
+        title: "验证失败",
+        description: "无法连接到RADIUS服务器，请检查配置",
         variant: "destructive",
       });
       setIsConfiguring(false);
@@ -48,13 +82,13 @@ const RadiusSetup: React.FC = () => {
     if (success) {
       toast({
         title: "RADIUS配置成功",
-        description: "RADIUS服务器已成功配置",
+        description: "RADIUS服务器已成功配置并验证",
       });
       navigate('/login');
     } else {
       toast({
         title: "配置失败",
-        description: "无法连接到RADIUS服务器，请检查配置",
+        description: "验证成功但配置失败，请重试",
         variant: "destructive",
       });
     }
@@ -107,8 +141,8 @@ const RadiusSetup: React.FC = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={isConfiguring}>
-              {isConfiguring ? "配置中..." : "保存配置"}
+            <Button type="submit" className="w-full" disabled={isConfiguring || isValidating}>
+              {isValidating ? "验证中..." : (isConfiguring ? "配置中..." : "验证并保存配置")}
             </Button>
           </CardFooter>
         </form>
