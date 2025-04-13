@@ -22,6 +22,7 @@ interface ChapterSidebarProps {
   onAddChapter: (title: string) => void;
   onDeleteChapter: (id: string) => void;
   onRenameChapter: (id: string, newTitle: string) => void;
+  readOnly?: boolean;
 }
 
 const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
@@ -30,7 +31,8 @@ const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
   onChapterSelect,
   onAddChapter,
   onDeleteChapter,
-  onRenameChapter
+  onRenameChapter,
+  readOnly = false
 }) => {
   const [newChapterTitle, setNewChapterTitle] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -79,24 +81,26 @@ const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
           <Book className="h-5 w-5" />
           <h2 className="text-lg font-semibold">章节导航</h2>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">新建章节</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>创建新章节</DialogTitle>
-            </DialogHeader>
-            <Input
-              placeholder="输入章节标题"
-              value={newChapterTitle}
-              onChange={(e) => setNewChapterTitle(e.target.value)}
-            />
-            <DialogFooter>
-              <Button onClick={handleAddChapter}>创建</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {!readOnly && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">新建章节</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>创建新章节</DialogTitle>
+              </DialogHeader>
+              <Input
+                placeholder="输入章节标题"
+                value={newChapterTitle}
+                onChange={(e) => setNewChapterTitle(e.target.value)}
+              />
+              <DialogFooter>
+                <Button onClick={handleAddChapter}>创建</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </SidebarHeader>
       
       <SidebarContent>
@@ -118,48 +122,50 @@ const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
                     <FileText className="mr-2 h-4 w-4" />
                     <span className="truncate">{chapter.title}</span>
                   </div>
-                  <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRenameChapterId(chapter.id);
-                            setNewTitle(chapter.title);
-                          }}
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>重命名章节</DialogTitle>
-                        </DialogHeader>
-                        <Input
-                          placeholder="输入新标题"
-                          value={newTitle}
-                          onChange={(e) => setNewTitle(e.target.value)}
-                        />
-                        <DialogFooter>
-                          <Button onClick={handleRenameChapter}>保存</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteChapter(chapter.id, chapter.title);
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  {!readOnly && (
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRenameChapterId(chapter.id);
+                              setNewTitle(chapter.title);
+                            }}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>重命名章节</DialogTitle>
+                          </DialogHeader>
+                          <Input
+                            placeholder="输入新标题"
+                            value={newTitle}
+                            onChange={(e) => setNewTitle(e.target.value)}
+                          />
+                          <DialogFooter>
+                            <Button onClick={handleRenameChapter}>保存</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteChapter(chapter.id, chapter.title);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))
