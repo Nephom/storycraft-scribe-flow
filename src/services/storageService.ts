@@ -1,5 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
+import { NovelProject, Chapter } from '@/types';
 
 const LOCAL_STORAGE_KEY = 'novel-writer-data';
 
