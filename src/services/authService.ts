@@ -1,5 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
+import type { User, AppSettings, RadiusSettings } from '../types';
 
 // In-memory storage for users and settings
 let users: User[] = [];

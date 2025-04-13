@@ -5,6 +5,7 @@ import ChapterSidebar from '@/components/ChapterSidebar';
 import Editor from '@/components/Editor';
 import Navbar from '@/components/Navbar';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   loadNovelProject, 
   saveNovelProject, 
@@ -21,10 +22,12 @@ const Index = () => {
   const [project, setProject] = useState<NovelProject | null>(null);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const userId = currentUser?.id || 'default';
 
   useEffect(() => {
     // 页面加载时尝试从 localStorage 加载项目
-    const loadedProject = loadNovelProject();
+    const loadedProject = loadNovelProject(userId);
     if (loadedProject) {
       setProject(loadedProject);
       // 如果有章节，默认选中第一个
@@ -35,20 +38,20 @@ const Index = () => {
       // 如果没有已保存的项目，创建一个新的
       const newProject = createNewProject();
       setProject(newProject);
-      saveNovelProject(newProject);
+      saveNovelProject(newProject, userId);
     }
-  }, []);
+  }, [userId]);
 
   // 添加一个自动保存功能
   useEffect(() => {
     if (project) {
       const intervalId = setInterval(() => {
-        saveNovelProject(project);
+        saveNovelProject(project, userId);
       }, 60000); // 每分钟自动保存一次
       
       return () => clearInterval(intervalId);
     }
-  }, [project]);
+  }, [project, userId]);
 
   const getActiveChapter = (): Chapter | null => {
     if (!project || !activeChapterId) return null;
@@ -60,7 +63,7 @@ const Index = () => {
     
     const updatedProject = addChapter(project, title);
     setProject(updatedProject);
-    saveNovelProject(updatedProject);
+    saveNovelProject(updatedProject, userId);
     
     // 选择新创建的章节
     const newChapterId = updatedProject.chapters[updatedProject.chapters.length - 1].id;
@@ -72,7 +75,7 @@ const Index = () => {
     
     const updatedProject = updateChapterService(project, chapterId, content);
     setProject(updatedProject);
-    saveNovelProject(updatedProject);
+    saveNovelProject(updatedProject, userId);
   };
 
   const handleDeleteChapter = (chapterId: string) => {
@@ -80,7 +83,7 @@ const Index = () => {
     
     const updatedProject = deleteChapterService(project, chapterId);
     setProject(updatedProject);
-    saveNovelProject(updatedProject);
+    saveNovelProject(updatedProject, userId);
     
     // 如果删除的是当前活动章节，则选择第一个章节或清除选择
     if (chapterId === activeChapterId) {
@@ -97,12 +100,16 @@ const Index = () => {
     
     const updatedProject = renameChapterService(project, chapterId, newTitle);
     setProject(updatedProject);
-    saveNovelProject(updatedProject);
+    saveNovelProject(updatedProject, userId);
   };
 
   const handleSaveAll = () => {
     if (project) {
-      saveNovelProject(project);
+      saveNovelProject(project, userId);
+      toast({
+        title: "保存成功",
+        description: "所有章节已保存"
+      });
     }
   };
 
@@ -140,6 +147,8 @@ const Index = () => {
             projectTitle={project.title}
             onSaveAll={handleSaveAll}
             onExport={handleExport}
+            username={currentUser?.username}
+            isOwner={true}
           />
           
           <div className="flex-1 overflow-hidden">
