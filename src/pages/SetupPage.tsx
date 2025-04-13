@@ -18,8 +18,9 @@ const SetupPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Check if admin already exists and redirect if so
+  // 检查管理员是否已存在并重定向
   useEffect(() => {
+    // 确保这个检查是服务器端的，不依赖于浏览器的localStorage
     if (isAdminCreated()) {
       toast({
         title: "设置已完成",
@@ -44,7 +45,7 @@ const SetupPage = () => {
     }
 
     try {
-      // Check if admin already exists (double check)
+      // 再次检查管理员是否已存在（双重检查）
       if (isAdminCreated()) {
         toast({
           title: "错误",
@@ -55,7 +56,7 @@ const SetupPage = () => {
         return;
       }
 
-      // Create admin user
+      // 创建管理员用户
       const user = createUser(username, password, true);
       
       toast({
@@ -63,10 +64,10 @@ const SetupPage = () => {
         description: "管理员账户已创建，正在登录...",
       });
       
-      // Auto login with created admin account
+      // 自动使用创建的管理员账户登录
       await login(username, password);
       
-      // Redirect to home page
+      // 重定向到首页
       navigate("/");
     } catch (error) {
       let errorMessage = "设置过程中出现错误";

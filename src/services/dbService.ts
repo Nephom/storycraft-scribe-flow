@@ -2,148 +2,235 @@
 import { v4 as uuidv4 } from 'uuid';
 import { User, AppSettings } from '@/types';
 import bcrypt from 'bcryptjs';
+import Database from 'better-sqlite3';
 
-// Local storage keys
-const USERS_KEY = 'novel-writer-users';
-const SETTINGS_KEY = 'novel-writer-settings';
-const GLOBAL_STATE_KEY = 'novel-writer-global-state';
+// 创建数据库连接
+const db = new Database('./novel-writer.db');
 
-// Initialize local storage with default settings if needed
-const initializeLocalStorage = () => {
-  // Initialize users if not exists
-  if (!localStorage.getItem(USERS_KEY)) {
-    localStorage.setItem(USERS_KEY, JSON.stringify([]));
+// 初始化数据库
+const initializeDatabase = () => {
+  // 创建用户表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE,
+      passwordHash TEXT,
+      isAdmin INTEGER,
+      createdAt INTEGER,
+      novels TEXT
+    )
+  `);
+
+  // 创建设置表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )
+  `);
+
+  // 检查设置是否存在，不存在则初始化
+  const settingsStmt = db.prepare('SELECT * FROM settings WHERE key = ?');
+  const allowRegistrationSetting = settingsStmt.get('allowRegistration');
+  const setupCompletedSetting = settingsStmt.get('setupCompleted');
+  const adminCreatedSetting = settingsStmt.get('adminCreated');
+
+  if (!allowRegistrationSetting) {
+    const insertStmt = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
+    insertStmt.run('allowRegistration', 'true');
   }
 
-  // Initialize settings if not exists
-  if (!localStorage.getItem(SETTINGS_KEY)) {
-    const defaultSettings = {
-      allowRegistration: true,
-      setupCompleted: false
-    };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
+  if (!setupCompletedSetting) {
+    const insertStmt = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
+    insertStmt.run('setupCompleted', 'false');
   }
 
-  // Initialize global state if not exists
-  if (!localStorage.getItem(GLOBAL_STATE_KEY)) {
-    const globalState = {
-      adminCreated: false
-    };
-    localStorage.setItem(GLOBAL_STATE_KEY, JSON.stringify(globalState));
+  if (!adminCreatedSetting) {
+    const insertStmt = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
+    insertStmt.run('adminCreated', 'false');
   }
 };
 
-// Call initialization
-initializeLocalStorage();
+// 初始化数据库
+try {
+  initializeDatabase();
+  console.log('数据库初始化成功');
+} catch (error) {
+  console.error('数据库初始化失败:', error);
+}
 
-// Global state functions
-export const getGlobalState = () => {
-  return JSON.parse(localStorage.getItem(GLOBAL_STATE_KEY) || '{"adminCreated": false}');
-};
-
-export const updateGlobalState = (state: Partial<{adminCreated: boolean}>) => {
-  const currentState = getGlobalState();
-  const updatedState = { ...currentState, ...state };
-  localStorage.setItem(GLOBAL_STATE_KEY, JSON.stringify(updatedState));
-  return updatedState;
-};
-
+// 全局状态函数
 export const isAdminCreated = (): boolean => {
-  const state = getGlobalState();
-  return state.adminCreated;
+  try {
+    const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
+    const result = stmt.get('adminCreated');
+    return result ? result.value === 'true' : false;
+  } catch (error) {
+    console.error('检查管理员状态失败:', error);
+    return false;
+  }
 };
 
-// User functions
+// 用户函数
 export const createUser = (username: string, password: string, isAdmin: boolean = false): User => {
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]') as User[];
-  
-  // Check if username exists
-  if (users.some(user => user.username === username)) {
-    throw new Error('Username already exists');
-  }
-  
-  // Check if trying to create admin and one already exists
-  if (isAdmin && isAdminCreated()) {
-    throw new Error('Admin already exists');
-  }
-  
-  const salt = bcrypt.genSaltSync(10);
-  const passwordHash = bcrypt.hashSync(password, salt);
-  const userId = uuidv4();
-  const now = Date.now();
-  
-  const newUser: User = {
-    id: userId,
-    username,
-    passwordHash,
-    isAdmin,
-    createdAt: now,
-    novels: []
-  };
-  
-  // Add user to storage
-  users.push(newUser);
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  
-  // If admin was created, update global state
-  if (isAdmin) {
-    updateGlobalState({ adminCreated: true });
+  try {
+    // 检查用户名是否存在
+    const checkStmt = db.prepare('SELECT * FROM users WHERE username = ?');
+    const existingUser = checkStmt.get(username);
     
-    // Also mark setup as completed
-    updateSettings({ setupCompleted: true });
+    if (existingUser) {
+      throw new Error('用户名已存在');
+    }
+    
+    // 检查是否尝试创建管理员且已存在管理员
+    if (isAdmin && isAdminCreated()) {
+      throw new Error('管理员已存在');
+    }
+    
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+    const userId = uuidv4();
+    const now = Date.now();
+    
+    const newUser: User = {
+      id: userId,
+      username,
+      passwordHash,
+      isAdmin,
+      createdAt: now,
+      novels: []
+    };
+    
+    // 将用户添加到数据库
+    const insertStmt = db.prepare('INSERT INTO users (id, username, passwordHash, isAdmin, createdAt, novels) VALUES (?, ?, ?, ?, ?, ?)');
+    insertStmt.run(
+      userId,
+      username,
+      passwordHash,
+      isAdmin ? 1 : 0,
+      now,
+      JSON.stringify([])
+    );
+    
+    // 如果创建的是管理员，更新全局状态
+    if (isAdmin) {
+      const updateStmt = db.prepare('UPDATE settings SET value = ? WHERE key = ?');
+      updateStmt.run('true', 'adminCreated');
+      
+      // 同时标记设置为已完成
+      updateStmt.run('true', 'setupCompleted');
+    }
+    
+    return newUser;
+  } catch (error) {
+    console.error('创建用户失败:', error);
+    throw error;
   }
-  
-  return newUser;
 };
 
 export const verifyUser = (username: string, password: string): User | null => {
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]') as User[];
-  const user = users.find(user => user.username === username);
-  
-  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+  try {
+    const stmt = db.prepare('SELECT * FROM users WHERE username = ?');
+    const user = stmt.get(username);
+    
+    if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+      return null;
+    }
+    
+    return {
+      ...user,
+      isAdmin: Boolean(user.isAdmin),
+      novels: JSON.parse(user.novels || '[]')
+    };
+  } catch (error) {
+    console.error('验证用户失败:', error);
     return null;
   }
-  
-  return user;
 };
 
 export const getUser = (userId: string): User | null => {
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]') as User[];
-  return users.find(user => user.id === userId) || null;
+  try {
+    const stmt = db.prepare('SELECT * FROM users WHERE id = ?');
+    const user = stmt.get(userId);
+    
+    if (!user) {
+      return null;
+    }
+    
+    return {
+      ...user,
+      isAdmin: Boolean(user.isAdmin),
+      novels: JSON.parse(user.novels || '[]')
+    };
+  } catch (error) {
+    console.error('获取用户失败:', error);
+    return null;
+  }
 };
 
 export const getAllUsers = (): User[] => {
-  return JSON.parse(localStorage.getItem(USERS_KEY) || '[]') as User[];
+  try {
+    const stmt = db.prepare('SELECT * FROM users');
+    const users = stmt.all();
+    
+    return users.map(user => ({
+      ...user,
+      isAdmin: Boolean(user.isAdmin),
+      novels: JSON.parse(user.novels || '[]')
+    }));
+  } catch (error) {
+    console.error('获取所有用户失败:', error);
+    return [];
+  }
 };
 
-// Settings functions
+// 设置函数
 export const getSettings = (): AppSettings => {
-  return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') as AppSettings;
+  try {
+    const stmt = db.prepare('SELECT key, value FROM settings');
+    const settingsRows = stmt.all();
+    
+    const settings: Record<string, any> = {};
+    for (const row of settingsRows) {
+      if (row.value === 'true' || row.value === 'false') {
+        settings[row.key] = row.value === 'true';
+      } else {
+        settings[row.key] = row.value;
+      }
+    }
+    
+    return settings as AppSettings;
+  } catch (error) {
+    console.error('获取设置失败:', error);
+    return { allowRegistration: true, setupCompleted: false };
+  }
 };
 
 export const updateSettings = (settings: Partial<AppSettings>): AppSettings => {
-  const currentSettings = getSettings();
-  const updatedSettings = { ...currentSettings, ...settings };
-  
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(updatedSettings));
-  
-  return updatedSettings;
+  try {
+    const updateStmt = db.prepare('UPDATE settings SET value = ? WHERE key = ?');
+    
+    for (const [key, value] of Object.entries(settings)) {
+      updateStmt.run(String(value), key);
+    }
+    
+    return getSettings();
+  } catch (error) {
+    console.error('更新设置失败:', error);
+    return getSettings();
+  }
 };
 
 export const isSetupCompleted = (): boolean => {
-  const settings = getSettings();
-  return settings.setupCompleted;
+  try {
+    const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
+    const result = stmt.get('setupCompleted');
+    return result ? result.value === 'true' : false;
+  } catch (error) {
+    console.error('检查设置状态失败:', error);
+    return false;
+  }
 };
 
-// We don't need to export a database instance anymore since we're using localStorage
-// but we'll keep a dummy export to maintain compatibility with the rest of the code
-const dummyDb = {
-  prepare: () => ({
-    get: () => null,
-    all: () => [],
-    run: () => {}
-  }),
-  exec: () => {}
-};
-
-export default dummyDb;
+// 为了与其他代码的兼容性，我们保留一个数据库实例的导出
+export default db;
