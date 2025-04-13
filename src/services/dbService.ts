@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { User, AppSettings } from '@/types';
 import bcrypt from 'bcryptjs';
@@ -5,6 +6,7 @@ import bcrypt from 'bcryptjs';
 // Local storage keys
 const USERS_KEY = 'novel-writer-users';
 const SETTINGS_KEY = 'novel-writer-settings';
+const GLOBAL_STATE_KEY = 'novel-writer-global-state';
 
 // Initialize local storage with default settings if needed
 const initializeLocalStorage = () => {
@@ -21,10 +23,35 @@ const initializeLocalStorage = () => {
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
   }
+
+  // Initialize global state if not exists
+  if (!localStorage.getItem(GLOBAL_STATE_KEY)) {
+    const globalState = {
+      adminCreated: false
+    };
+    localStorage.setItem(GLOBAL_STATE_KEY, JSON.stringify(globalState));
+  }
 };
 
 // Call initialization
 initializeLocalStorage();
+
+// Global state functions
+export const getGlobalState = () => {
+  return JSON.parse(localStorage.getItem(GLOBAL_STATE_KEY) || '{"adminCreated": false}');
+};
+
+export const updateGlobalState = (state: Partial<{adminCreated: boolean}>) => {
+  const currentState = getGlobalState();
+  const updatedState = { ...currentState, ...state };
+  localStorage.setItem(GLOBAL_STATE_KEY, JSON.stringify(updatedState));
+  return updatedState;
+};
+
+export const isAdminCreated = (): boolean => {
+  const state = getGlobalState();
+  return state.adminCreated;
+};
 
 // User functions
 export const createUser = (username: string, password: string, isAdmin: boolean = false): User => {
@@ -33,6 +60,11 @@ export const createUser = (username: string, password: string, isAdmin: boolean 
   // Check if username exists
   if (users.some(user => user.username === username)) {
     throw new Error('Username already exists');
+  }
+  
+  // Check if trying to create admin and one already exists
+  if (isAdmin && isAdminCreated()) {
+    throw new Error('Admin already exists');
   }
   
   const salt = bcrypt.genSaltSync(10);
@@ -52,6 +84,14 @@ export const createUser = (username: string, password: string, isAdmin: boolean 
   // Add user to storage
   users.push(newUser);
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  
+  // If admin was created, update global state
+  if (isAdmin) {
+    updateGlobalState({ adminCreated: true });
+    
+    // Also mark setup as completed
+    updateSettings({ setupCompleted: true });
+  }
   
   return newUser;
 };

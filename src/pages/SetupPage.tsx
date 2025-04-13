@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
-import { createUser, updateSettings } from '@/services/dbService';
+import React, { useState, useEffect } from 'react';
+import { createUser, updateSettings, isAdminCreated } from '@/services/dbService';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 
 const SetupPage = () => {
   const [username, setUsername] = useState("");
@@ -15,8 +16,20 @@ const SetupPage = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Check if admin already exists and redirect if so
+  useEffect(() => {
+    if (isAdminCreated()) {
+      toast({
+        title: "设置已完成",
+        description: "管理员账户已存在，无需重复设置",
+      });
+      navigate("/login");
+    }
+  }, [navigate, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -31,23 +44,39 @@ const SetupPage = () => {
     }
 
     try {
+      // Check if admin already exists (double check)
+      if (isAdminCreated()) {
+        toast({
+          title: "错误",
+          description: "管理员账户已存在",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+
       // Create admin user
-      createUser(username, password, true);
-      
-      // Mark setup as completed
-      updateSettings({ setupCompleted: true });
+      const user = createUser(username, password, true);
       
       toast({
         title: "设置完成",
-        description: "管理员账户已创建，您现在可以登录",
+        description: "管理员账户已创建，正在登录...",
       });
+      
+      // Auto login with created admin account
+      await login(username, password);
       
       // Redirect to home page
       navigate("/");
     } catch (error) {
+      let errorMessage = "设置过程中出现错误";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "错误",
-        description: "设置过程中出现错误",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

@@ -12,10 +12,11 @@ import RegisterPage from "./pages/RegisterPage";
 import SetupPage from "./pages/SetupPage";
 import AdminPage from "./pages/AdminPage";
 import UserListPage from "./pages/UserListPage";
-import { isSetupCompleted } from "./services/dbService";
+import { isSetupCompleted, isAdminCreated } from "./services/dbService";
 
 const queryClient = new QueryClient();
 const setupCompleted = isSetupCompleted();
+const adminCreated = isAdminCreated();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -25,10 +26,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {!setupCompleted && (
+            {!setupCompleted && !adminCreated && (
               <Route path="/setup" element={<SetupPage />} />
             )}
-            {!setupCompleted ? (
+            {!setupCompleted && !adminCreated ? (
               <Route path="*" element={<Navigate to="/setup" replace />} />
             ) : (
               <>
